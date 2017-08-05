@@ -1,10 +1,10 @@
 [package]
-name = "tyr"
-version = "0.1.0"
 authors = ["Jason Ozias <jason.g.ozias@gmail.com>"]
 license = "MIT/Apache-2.0"
+name = "tyr"
 readme = "README.md"
-
+version = "0.1.0"
 [dependencies]
 clap = "2.26.0"
+dotenv = "0.10.1"
 error-chain = "0.11.0-rc.2"
