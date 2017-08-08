@@ -10,9 +10,13 @@
 #![deny(missing_docs)]
 #[macro_use]
 extern crate error_chain;
+#[macro_use]
+extern crate lazy_static;
+
 extern crate clap;
 extern crate dotenv;
 
+mod env;
 mod error;
 mod run;
 
