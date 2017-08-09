@@ -9,7 +9,6 @@
 //! `tyr` errors
 error_chain!{
     foreign_links {
-        Dotenv(::dotenv::Error);
         Io(::std::io::Error);
     }
 }

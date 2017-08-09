@@ -12,7 +12,6 @@
 extern crate error_chain;
 
 extern crate clap;
-extern crate dotenv;
 
 mod error;
 mod run;

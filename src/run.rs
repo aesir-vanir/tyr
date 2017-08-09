@@ -8,14 +8,11 @@
 
 //! `tyr` runtime
 use clap::App;
-use dotenv;
 use error::Result;
 use std::io::{self, Write};
 
 /// CLI Runtime
 pub fn run() -> Result<i32> {
-    let dotenv_path = dotenv::dotenv()?;
-    writeln!(io::stdout(), "Loaded {}", dotenv_path.to_string_lossy())?;
     let _matches = App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
