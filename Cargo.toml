@@ -4,8 +4,11 @@ license = "MIT/Apache-2.0"
 name = "tyr"
 readme = "README.md"
 version = "0.1.0"
-
 [dependencies]
 clap = "2.26.0"
+derive_builder = "0.5.0"
 error-chain = "0.11.0-rc.2"
+getset = "0.0.5"
 lazy_static = "0.2.8"
+mimir = "0.1.2"
+vidar = "0.1.0"

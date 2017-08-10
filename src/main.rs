@@ -9,10 +9,16 @@
 //! `tyr` 0.1.0
 #![deny(missing_docs)]
 #[macro_use]
+extern crate derive_builder;
+#[macro_use]
 extern crate error_chain;
+#[macro_use]
+extern crate getset;
 
 extern crate clap;
+extern crate mimir;
 
+mod context;
 mod error;
 mod run;
 
