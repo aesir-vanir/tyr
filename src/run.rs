@@ -11,7 +11,7 @@ use clap::{App, Arg};
 use context::{Context, ContextBuilder};
 use error::{ErrorKind, Result};
 use mimir::enums::ODPIFetchMode::Next;
-use mimir::{flags, Connection};
+use mimir::{flags, Connection, Data};
 use std::ffi::CString;
 
 /// Connect to the database.
@@ -35,14 +35,22 @@ fn conn(ctxt: &Context) -> Result<()> {
     let user_tables = conn.prepare_stmt(Some("select table_name from user_tables"), None, false)?;
 
     let _cols = user_tables.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
-    let user_tables_query_info = user_tables.get_query_info(1)?;
-    writeln!(
-        io::stdout(),
-        "Cols: {}",
-        user_tables_query_info.oracle_type_num()
-    )?;
-    let (_buffer_row_index, _num_rows_fetched, _more_rows) = user_tables.fetch_rows(10)?;
-    user_tables.scroll(Next, 0, 0)?;
+    let (_buffer_row_index, num_rows_fetched, _more_rows) = user_tables.fetch_rows(10)?;
+    let mut table_names = Vec::new();
+
+    for _ in 1..(num_rows_fetched + 1) {
+        let (_id_type, id_ptr) = user_tables.get_query_value(1)?;
+        let data: Data = id_ptr.into();
+        table_names.push(data.get_string());
+        if num_rows_fetched > 1 {
+            user_tables.scroll(Next, 0, 0)?;
+        }
+    }
+
+    for table in table_names {
+        writeln!(io::stdout(), "Table: {}", table)?;
+    }
+
     user_tables.close(None)?;
     Ok(())
 }
