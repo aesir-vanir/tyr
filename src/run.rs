@@ -10,9 +10,23 @@
 use clap::{App, Arg};
 use context::{Context, ContextBuilder};
 use error::{ErrorKind, Result};
-use mimir::enums::ODPIFetchMode::Next;
+use mimir::enums::ODPINativeTypeNum::Bytes;
+use mimir::enums::ODPIOracleTypeNum::Varchar;
 use mimir::{flags, Connection, Data};
+use std::collections::HashMap;
 use std::ffi::CString;
+
+const DESC: &'static str = "SELECT column_name, nullable, data_type, data_length
+FROM user_tab_columns
+WHERE table_name=:table_name";
+
+#[derive(Clone, Debug, Default, PartialEq)]
+struct ColumnInfo {
+    name: String,
+    nullable: bool,
+    data_type: String,
+    data_length: f64,
+}
 
 /// Connect to the database.
 fn conn(ctxt: &Context) -> Result<()> {
@@ -35,20 +49,51 @@ fn conn(ctxt: &Context) -> Result<()> {
     let user_tables = conn.prepare_stmt(Some("select table_name from user_tables"), None, false)?;
 
     let _cols = user_tables.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
-    let (_buffer_row_index, num_rows_fetched, _more_rows) = user_tables.fetch_rows(10)?;
-    let mut table_names = Vec::new();
+    let (mut found, _) = user_tables.fetch()?;
+    let mut table_names: HashMap<String, ColumnInfo> = HashMap::new();
 
-    for _ in 1..(num_rows_fetched + 1) {
+    while found {
         let (_id_type, id_ptr) = user_tables.get_query_value(1)?;
         let data: Data = id_ptr.into();
-        table_names.push(data.get_string());
-        if num_rows_fetched > 1 {
-            user_tables.scroll(Next, 0, 0)?;
-        }
+        table_names.insert(data.get_string(), Default::default());
+        let (f, _) = user_tables.fetch()?;
+        found = f;
     }
 
-    for table in table_names {
-        writeln!(io::stdout(), "Table: {}", table)?;
+    for (table, _col_info) in table_names.iter_mut() {
+        let table_desc = conn.prepare_stmt(Some(DESC), None, false)?;
+        let table_name_var = conn.new_var(Varchar, Bytes, 1, 256, false, false)?;
+        table_name_var.set_from_bytes(0, &table)?;
+        table_desc.bind_by_name(":table_name", &table_name_var)?;
+
+        let _cols = table_desc.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
+        let (mut found, _buffer_row_index) = table_desc.fetch()?;
+
+        while found {
+            let (_name_type, name_ptr) = table_desc.get_query_value(1)?;
+            let name_data: Data = name_ptr.into();
+            let (_nullable_type, nullable_ptr) = table_desc.get_query_value(2)?;
+            let nullable_data: Data = nullable_ptr.into();
+            let (_data_type, data_type_ptr) = table_desc.get_query_value(3)?;
+            let data_type_data: Data = data_type_ptr.into();
+            let (_data_length_type, data_length_ptr) = table_desc.get_query_value(4)?;
+            let data_length_data: Data = data_length_ptr.into();
+
+            writeln!(
+                io::stdout(),
+                "{}, {}, {}, {}",
+                name_data.get_string(),
+                nullable_data.get_string(),
+                data_type_data.get_string(),
+                data_length_data.get_double()
+            )?;
+
+            let (f, _) = table_desc.fetch()?;
+            found = f;
+        }
+
+        table_name_var.release()?;
+        table_desc.close(None)?;
     }
 
     user_tables.close(None)?;
@@ -99,7 +144,15 @@ pub fn run() -> Result<i32> {
         .username(username.to_string())
         .password(password.to_string())
         .build()?;
-    conn(&ctxt)?;
+
+    use std::io::{self, Write};
+    match conn(&ctxt) {
+        Ok(()) => {}
+        Err(e) => {
+            writeln!(io::stderr(), "{}", ctxt.db_context().get_error())?;
+            return Err(e);
+        }
+    }
 
     Ok(0)
 }
