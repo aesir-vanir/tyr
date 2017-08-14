@@ -11,11 +11,16 @@ error_chain!{
     foreign_links {
         Io(::std::io::Error);
         Mimir(::mimir::error::Error);
+        Term(::term::Error);
     }
     errors {
         ConnectionString {
             description("The connection string is a required command line argument!")
             display("The connection string is a required command line argument!")
+        }
+        Stdout {
+            description("Unable to open the stdout terminal for writing!")
+            display("Unable to open the stdout terminal for writing!")
         }
     }
 }

@@ -15,22 +15,52 @@ use mimir::enums::ODPIOracleTypeNum::Varchar;
 use mimir::{flags, Connection, Data};
 use std::collections::HashMap;
 use std::ffi::CString;
+use std::fmt;
+use util;
 
-const DESC: &'static str = "SELECT column_name, nullable, data_type, data_length
+/// User space table names query.
+const TABLE_NAMES: &'static str = r"select table_name from user_tables";
+/// Describe user space tables Oracle SQL.
+const DESC: &'static str = r"SELECT column_name, nullable, data_type, data_length
 FROM user_tab_columns
 WHERE table_name=:table_name";
 
-#[derive(Clone, Debug, Default, PartialEq)]
-struct ColumnInfo {
+#[derive(Clone, Debug, Default, Getters, PartialEq, Setters)]
+/// Column information relevant for `tyr`.
+pub struct ColumnInfo {
+    /// Name
+    #[set = "pub"]
+    #[get = "pub"]
     name: String,
+    /// Is the column nullable?
+    #[set = "pub"]
+    #[get = "pub"]
     nullable: bool,
+    /// The column data type.
+    #[set = "pub"]
+    #[get = "pub"]
     data_type: String,
+    /// The column data length.
+    #[set = "pub"]
+    #[get = "pub"]
     data_length: f64,
+}
+
+impl fmt::Display for ColumnInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}, {}, {}({})",
+            self.name,
+            self.nullable,
+            self.data_type,
+            self.data_length
+        )
+    }
 }
 
 /// Connect to the database.
 fn conn(ctxt: &Context) -> Result<()> {
-    use std::io::{self, Write};
     let db_ctxt = ctxt.db_context();
     let mut common_create_params = db_ctxt.init_common_create_params()?;
     let enc_cstr = CString::new("UTF-8").expect("badness");
@@ -46,11 +76,11 @@ fn conn(ctxt: &Context) -> Result<()> {
         None,
     )?;
 
-    let user_tables = conn.prepare_stmt(Some("select table_name from user_tables"), None, false)?;
+    let user_tables = conn.prepare_stmt(Some(TABLE_NAMES), None, false)?;
 
     let _cols = user_tables.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
     let (mut found, _) = user_tables.fetch()?;
-    let mut table_names: HashMap<String, ColumnInfo> = HashMap::new();
+    let mut table_names: HashMap<String, Vec<ColumnInfo>> = HashMap::new();
 
     while found {
         let (_id_type, id_ptr) = user_tables.get_query_value(1)?;
@@ -60,33 +90,36 @@ fn conn(ctxt: &Context) -> Result<()> {
         found = f;
     }
 
-    for (table, _col_info) in table_names.iter_mut() {
+    for (table, col_info_vec) in &mut table_names {
         let table_desc = conn.prepare_stmt(Some(DESC), None, false)?;
         let table_name_var = conn.new_var(Varchar, Bytes, 1, 256, false, false)?;
-        table_name_var.set_from_bytes(0, &table)?;
+        table_name_var.set_from_bytes(0, table)?;
         table_desc.bind_by_name(":table_name", &table_name_var)?;
 
         let _cols = table_desc.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
         let (mut found, _buffer_row_index) = table_desc.fetch()?;
 
         while found {
-            let (_name_type, name_ptr) = table_desc.get_query_value(1)?;
+            let (_, name_ptr) = table_desc.get_query_value(1)?;
             let name_data: Data = name_ptr.into();
-            let (_nullable_type, nullable_ptr) = table_desc.get_query_value(2)?;
+            let (_, nullable_ptr) = table_desc.get_query_value(2)?;
             let nullable_data: Data = nullable_ptr.into();
-            let (_data_type, data_type_ptr) = table_desc.get_query_value(3)?;
+            let (_, data_type_ptr) = table_desc.get_query_value(3)?;
             let data_type_data: Data = data_type_ptr.into();
-            let (_data_length_type, data_length_ptr) = table_desc.get_query_value(4)?;
+            let (_, data_length_ptr) = table_desc.get_query_value(4)?;
             let data_length_data: Data = data_length_ptr.into();
 
-            writeln!(
-                io::stdout(),
-                "{}, {}, {}, {}",
-                name_data.get_string(),
-                nullable_data.get_string(),
-                data_type_data.get_string(),
-                data_length_data.get_double()
-            )?;
+            let mut col_info: ColumnInfo = Default::default();
+            let col_name = name_data.get_string();
+            let nullable = nullable_data.get_string() == "Y";
+            let data_type = data_type_data.get_string();
+            let data_length = data_length_data.get_double();
+
+            col_info.set_name(col_name);
+            col_info.set_nullable(nullable);
+            col_info.set_data_type(data_type);
+            col_info.set_data_length(data_length);
+            col_info_vec.push(col_info);
 
             let (f, _) = table_desc.fetch()?;
             found = f;
@@ -97,11 +130,14 @@ fn conn(ctxt: &Context) -> Result<()> {
     }
 
     user_tables.close(None)?;
+    util::pretty_print_tables(&table_names)?;
+
     Ok(())
 }
 
 /// CLI Runtime
 pub fn run() -> Result<i32> {
+    use std::io::{self, Write};
     let matches = App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
@@ -145,7 +181,6 @@ pub fn run() -> Result<i32> {
         .password(password.to_string())
         .build()?;
 
-    use std::io::{self, Write};
     match conn(&ctxt) {
         Ok(()) => {}
         Err(e) => {

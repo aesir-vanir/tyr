@@ -17,10 +17,12 @@ extern crate getset;
 
 extern crate clap;
 extern crate mimir;
+extern crate term;
 
 mod context;
 mod error;
 mod run;
+mod util;
 
 use std::io::{self, Write};
 use std::process;
