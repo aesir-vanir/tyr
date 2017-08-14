@@ -1,9 +1,10 @@
-/// `tyr` utilities
+//! `tyr` utilities
 use error::{ErrorKind, Result};
 use run::ColumnInfo;
 use std::collections::HashMap;
 use term;
 
+/// Pretty print table column information.
 pub fn pretty_print_tables(tables: &HashMap<String, Vec<ColumnInfo>>) -> Result<()> {
     for (table, col_info_vec) in tables {
         let mut t = term::stdout().ok_or_else(|| ErrorKind::Stdout)?;
