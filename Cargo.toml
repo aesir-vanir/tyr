@@ -13,3 +13,6 @@ lazy_static = "0.2.8"
 mimir = "0.2.0"
 term = "0.4.6"
 vidar = "0.1.0"
+
+[replace]
+"derive_builder:0.5.0" = { path = "../rust-derive-builder/derive_builder" }
