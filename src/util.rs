@@ -18,7 +18,11 @@ pub fn pretty_print_tables(tables: &HashMap<String, Vec<ColumnInfo>>) -> Result<
 
         for col_info in col_info_vec {
             let name_len = col_info.name().len();
-            let nullable_len = col_info.nullable().to_string().len();
+            let nullable_len = if let Some(val) = *col_info.nullable() {
+                val.to_string().len()
+            } else {
+                "(null)".len()
+            };
 
             if name_len > max_name_len {
                 max_name_len = name_len;
@@ -69,7 +73,11 @@ pub fn pretty_print_tables(tables: &HashMap<String, Vec<ColumnInfo>>) -> Result<
                 }
             }
 
-            let mut nullable_str = col_info.nullable().to_string();
+            let mut nullable_str = if let Some(val) = *col_info.nullable() {
+                val.to_string()
+            } else {
+                "(null)".to_string()
+            };
             let nullable_str_len = nullable_str.len();
             if nullable_str_len < max_name_len {
                 let total = max_nullable_len - nullable_str_len;
@@ -78,12 +86,17 @@ pub fn pretty_print_tables(tables: &HashMap<String, Vec<ColumnInfo>>) -> Result<
                 }
             }
 
+            let data_type_str = if let Some(ref val) = *col_info.data_type() {
+                val.clone()
+            } else {
+                "(null)".to_string()
+            };
             writeln!(
                 t,
                 "  {}  {}  {}({})",
                 col_name,
                 nullable_str,
-                col_info.data_type(),
+                data_type_str,
                 col_info.data_length()
             )?;
         }

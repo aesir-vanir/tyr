@@ -21,29 +21,42 @@ use util;
 /// User space table names query.
 const TABLE_NAMES: &'static str = r"select table_name from user_tables";
 /// Describe user space tables Oracle SQL.
-const DESC: &'static str = r"SELECT column_name, nullable, data_type, data_length
+const DESC: &'static str = r"SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, DATA_TYPE_MOD,
+DATA_TYPE_OWNER, DATA_LENGTH, DATA_PRECISION, DATA_SCALE, NULLABLE, COLUMN_ID, DEFAULT_LENGTH,
+NUM_DISTINCT, LOW_VALUE, HIGH_VALUE, DENSITY, NUM_NULLS, NUM_BUCKETS, LAST_ANALYZED, SAMPLE_SIZE,
+CHARACTER_SET_NAME, CHAR_COL_DECL_LENGTH, GLOBAL_STATS, USER_STATS, AVG_COL_LEN, CHAR_LENGTH,
+CHAR_USED, V80_FMT_IMAGE, DATA_UPGRADED, HISTOGRAM, DEFAULT_ON_NULL, IDENTITY_COLUMN,
+EVALUATION_EDITION, UNUSABLE_BEFORE, UNUSABLE_BEGINNING
 FROM user_tab_columns
 WHERE table_name=:table_name";
 
 #[derive(Clone, Debug, Default, Getters, PartialEq, Setters)]
 /// Column information relevant for `tyr`.
 pub struct ColumnInfo {
-    /// Name
+    /// The column name.
     #[set = "pub"]
     #[get = "pub"]
     name: String,
-    /// Is the column nullable?
-    #[set = "pub"]
-    #[get = "pub"]
-    nullable: bool,
-    /// The column data type.
-    #[set = "pub"]
-    #[get = "pub"]
-    data_type: String,
     /// The column data length.
     #[set = "pub"]
     #[get = "pub"]
     data_length: f64,
+    /// The column data type.
+    #[set = "pub"]
+    #[get = "pub"]
+    data_type: Option<String>,
+    /// Is the column nullable?
+    #[set = "pub"]
+    #[get = "pub"]
+    nullable: Option<bool>,
+}
+
+fn string_or_null<T: fmt::Display>(opt_val: &Option<T>) -> String {
+    if let Some(ref val) = *opt_val {
+        val.to_string()
+    } else {
+        "(null)".to_string()
+    }
 }
 
 impl fmt::Display for ColumnInfo {
@@ -52,8 +65,8 @@ impl fmt::Display for ColumnInfo {
             f,
             "{}, {}, {}({})",
             self.name,
-            self.nullable,
-            self.data_type,
+            string_or_null(&self.nullable),
+            string_or_null(&self.data_type),
             self.data_length
         )
     }
@@ -61,6 +74,7 @@ impl fmt::Display for ColumnInfo {
 
 /// Connect to the database.
 fn conn(ctxt: &Context) -> Result<()> {
+    use std::io::{self, Write};
     let db_ctxt = ctxt.db_context();
     let mut common_create_params = db_ctxt.init_common_create_params()?;
     let enc_cstr = CString::new("UTF-8").expect("badness");
@@ -96,29 +110,49 @@ fn conn(ctxt: &Context) -> Result<()> {
         table_name_var.set_from_bytes(0, table)?;
         table_desc.bind_by_name(":table_name", &table_name_var)?;
 
-        let _cols = table_desc.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
+        let cols = table_desc.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
         let (mut found, _buffer_row_index) = table_desc.fetch()?;
+        writeln!(io::stdout(), "Cols: {}", cols)?;
 
         while found {
-            let (_, name_ptr) = table_desc.get_query_value(1)?;
+            let (_, name_ptr) = table_desc.get_query_value(2)?;
             let name_data: Data = name_ptr.into();
-            let (_, nullable_ptr) = table_desc.get_query_value(2)?;
-            let nullable_data: Data = nullable_ptr.into();
             let (_, data_type_ptr) = table_desc.get_query_value(3)?;
             let data_type_data: Data = data_type_ptr.into();
-            let (_, data_length_ptr) = table_desc.get_query_value(4)?;
+            let (_, data_type_mod_ptr) = table_desc.get_query_value(4)?;
+            let data_type_mod_data: Data = data_type_mod_ptr.into();
+            let (_, data_type_owner_ptr) = table_desc.get_query_value(5)?;
+            let _data_type_owner_data: Data = data_type_owner_ptr.into();
+            let (_, data_length_ptr) = table_desc.get_query_value(6)?;
             let data_length_data: Data = data_length_ptr.into();
+            let (_, nullable_ptr) = table_desc.get_query_value(9)?;
+            let nullable_data: Data = nullable_ptr.into();
+            let (_, last_analyzed_ptr) = table_desc.get_query_value(18)?;
+            let last_analyzed_data: Data = last_analyzed_ptr.into();
 
             let mut col_info: ColumnInfo = Default::default();
             let col_name = name_data.get_string();
             let nullable = nullable_data.get_string() == "Y";
             let data_type = data_type_data.get_string();
             let data_length = data_length_data.get_double();
+            let last_analyzed = last_analyzed_data.get_utc();
 
-            col_info.set_name(col_name);
-            col_info.set_nullable(nullable);
-            col_info.set_data_type(data_type);
+            if !name_data.null() {
+                col_info.set_name(col_name);
+            }
+            col_info.set_nullable(Some(nullable));
+            col_info.set_data_type(Some(data_type));
+            if !data_type_mod_data.null() {
+                writeln!(
+                    io::stdout(),
+                    "Data Type Mod: {}",
+                    data_type_mod_data.get_string()
+                )?;
+            } else {
+                writeln!(io::stdout(), "Data Type Mod: (null)")?;
+            }
             col_info.set_data_length(data_length);
+            writeln!(io::stdout(), "Last Analyzed: {}", last_analyzed)?;
             col_info_vec.push(col_info);
 
             let (f, _) = table_desc.fetch()?;
