@@ -4,6 +4,7 @@ license = "MIT/Apache-2.0"
 name = "tyr"
 readme = "README.md"
 version = "0.1.0"
+
 [dependencies]
 chrono = "0.4.0"
 clap = "2.26.0"
@@ -14,5 +15,7 @@ lazy_static = "0.2.8"
 mimir = "0.2.0"
 term = "0.4.6"
 vidar = "0.1.0"
-[replace."derive_builder:0.5.0"]
-path = "../rust-derive-builder/derive_builder"
+
+[replace]
+"mimir:0.2.0" = { path = "../mimir" }
+"derive_builder:0.5.0" = { path = "../rust-derive-builder/derive_builder" }
