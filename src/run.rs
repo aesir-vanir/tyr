@@ -7,6 +7,7 @@
 // modified, or distributed except according to those terms.
 
 //! `tyr` runtime
+use chrono::{DateTime, Utc};
 use clap::{App, Arg};
 use context::{Context, ContextBuilder};
 use error::{ErrorKind, Result};
@@ -37,20 +38,29 @@ pub struct ColumnInfo {
     #[set = "pub"]
     #[get = "pub"]
     name: String,
-    /// The column data length.
-    #[set = "pub"]
-    #[get = "pub"]
-    data_length: f64,
     /// The column data type.
     #[set = "pub"]
     #[get = "pub"]
     data_type: Option<String>,
+    /// The column data type modifier.
+    #[set = "pub"]
+    // #[get = "pub"]
+    data_type_mod: Option<String>,
+    /// The column data length.
+    #[set = "pub"]
+    #[get = "pub"]
+    data_length: f64,
     /// Is the column nullable?
     #[set = "pub"]
     #[get = "pub"]
     nullable: Option<bool>,
+    /// Last analysis time.
+    #[set = "pub"]
+    // #[get = "pub"]
+    last_analyzed: Option<DateTime<Utc>>,
 }
 
+/// Generate a `String` from an optional `Display` or "(null)" if None.
 fn string_or_null<T: fmt::Display>(opt_val: &Option<T>) -> String {
     if let Some(ref val) = *opt_val {
         val.to_string()
@@ -63,11 +73,13 @@ impl fmt::Display for ColumnInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}, {}, {}({})",
+            "{}|{}|{}|{}|{}|{}",
             self.name,
-            string_or_null(&self.nullable),
             string_or_null(&self.data_type),
-            self.data_length
+            string_or_null(&self.data_type_mod),
+            self.data_length,
+            string_or_null(&self.nullable),
+            string_or_null(&self.last_analyzed)
         )
     }
 }
@@ -110,9 +122,8 @@ fn conn(ctxt: &Context) -> Result<()> {
         table_name_var.set_from_bytes(0, table)?;
         table_desc.bind_by_name(":table_name", &table_name_var)?;
 
-        let cols = table_desc.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
+        let _cols = table_desc.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
         let (mut found, _buffer_row_index) = table_desc.fetch()?;
-        writeln!(io::stdout(), "Cols: {}", cols)?;
 
         while found {
             let (_, name_ptr) = table_desc.get_query_value(2)?;
@@ -131,27 +142,31 @@ fn conn(ctxt: &Context) -> Result<()> {
             let last_analyzed_data: Data = last_analyzed_ptr.into();
 
             let mut col_info: ColumnInfo = Default::default();
-            let col_name = name_data.get_string();
-            let nullable = nullable_data.get_string() == "Y";
-            let data_type = data_type_data.get_string();
-            let data_length = data_length_data.get_double();
             let last_analyzed = last_analyzed_data.get_utc();
 
             if !name_data.null() {
+                let col_name = name_data.get_string();
                 col_info.set_name(col_name);
             }
-            col_info.set_nullable(Some(nullable));
-            col_info.set_data_type(Some(data_type));
-            if !data_type_mod_data.null() {
-                writeln!(
-                    io::stdout(),
-                    "Data Type Mod: {}",
-                    data_type_mod_data.get_string()
-                )?;
-            } else {
-                writeln!(io::stdout(), "Data Type Mod: (null)")?;
+            not_null!(nullable_data, {
+                let nullable = nullable_data.get_string() == "Y";
+                col_info.set_nullable(Some(nullable));
+            });
+            not_null!(data_type_data, {
+                let data_type = data_type_data.get_string();
+                col_info.set_data_type(Some(data_type));
+            });
+            not_null!(data_type_mod_data, {
+                let data_type_mod = data_type_mod_data.get_string();
+                col_info.set_data_type_mod(Some(data_type_mod));
+            });
+            if !data_length_data.null() {
+                col_info.set_data_length(data_length_data.get_double());
             }
-            col_info.set_data_length(data_length);
+            not_null!(last_analyzed_data, {
+                let last_analyzed = last_analyzed_data.get_utc();
+                col_info.set_last_analyzed(Some(last_analyzed));
+            });
             writeln!(io::stdout(), "Last Analyzed: {}", last_analyzed)?;
             col_info_vec.push(col_info);
 

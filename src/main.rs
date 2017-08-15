@@ -14,7 +14,10 @@ extern crate derive_builder;
 extern crate error_chain;
 #[macro_use]
 extern crate getset;
+#[macro_use]
+mod macros;
 
+extern crate chrono;
 extern crate clap;
 extern crate mimir;
 extern crate term;

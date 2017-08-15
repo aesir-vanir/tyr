@@ -15,8 +15,10 @@ pub fn pretty_print_tables(tables: &HashMap<String, Vec<ColumnInfo>>) -> Result<
         t.flush()?;
         let mut max_name_len = 0;
         let mut max_nullable_len = 0;
+        let mut col_info_strs = Vec::new();
 
         for col_info in col_info_vec {
+            col_info_strs.push(col_info.to_string());
             let name_len = col_info.name().len();
             let nullable_len = if let Some(val) = *col_info.nullable() {
                 val.to_string().len()
@@ -102,6 +104,9 @@ pub fn pretty_print_tables(tables: &HashMap<String, Vec<ColumnInfo>>) -> Result<
         }
         t.reset()?;
         t.flush()?;
+        for col_info_str in col_info_strs {
+            writeln!(t, "{}", col_info_str)?;
+        }
     }
 
     Ok(())
