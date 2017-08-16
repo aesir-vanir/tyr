@@ -36,11 +36,11 @@ WHERE table_name=:table_name";
 pub struct ColumnInfo {
     /// The column name.
     #[set = "pub"]
-    #[get = "pub"]
+    // #[get = "pub"]
     name: String,
     /// The column data type.
     #[set = "pub"]
-    #[get = "pub"]
+    // #[get = "pub"]
     data_type: Option<String>,
     /// The column data type modifier.
     #[set = "pub"]
@@ -48,11 +48,11 @@ pub struct ColumnInfo {
     data_type_mod: Option<String>,
     /// The column data length.
     #[set = "pub"]
-    #[get = "pub"]
+    // #[get = "pub"]
     data_length: f64,
     /// Is the column nullable?
     #[set = "pub"]
-    #[get = "pub"]
+    // #[get = "pub"]
     nullable: Option<bool>,
     /// Last analysis time.
     #[set = "pub"]
@@ -86,7 +86,6 @@ impl fmt::Display for ColumnInfo {
 
 /// Connect to the database.
 fn conn(ctxt: &Context) -> Result<()> {
-    use std::io::{self, Write};
     let db_ctxt = ctxt.db_context();
     let mut common_create_params = db_ctxt.init_common_create_params()?;
     let enc_cstr = CString::new("UTF-8").expect("badness");
@@ -142,7 +141,6 @@ fn conn(ctxt: &Context) -> Result<()> {
             let last_analyzed_data: Data = last_analyzed_ptr.into();
 
             let mut col_info: ColumnInfo = Default::default();
-            let last_analyzed = last_analyzed_data.get_utc();
 
             if !name_data.null() {
                 let col_name = name_data.get_string();
@@ -167,7 +165,6 @@ fn conn(ctxt: &Context) -> Result<()> {
                 let last_analyzed = last_analyzed_data.get_utc();
                 col_info.set_last_analyzed(Some(last_analyzed));
             });
-            writeln!(io::stdout(), "Last Analyzed: {}", last_analyzed)?;
             col_info_vec.push(col_info);
 
             let (f, _) = table_desc.fetch()?;
