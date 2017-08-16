@@ -14,7 +14,6 @@ getset = "0.0.5"
 lazy_static = "0.2.8"
 mimir = "0.2.0"
 term = "0.4.6"
-vidar = "0.1.0"
 
 [replace]
 "mimir:0.2.0" = { path = "../mimir" }
