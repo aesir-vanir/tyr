@@ -11,6 +11,7 @@ use chrono::{DateTime, Utc};
 use clap::{App, Arg};
 use context::{Context, ContextBuilder};
 use error::{ErrorKind, Result};
+use hex_slice::AsHex;
 use mimir::enums::ODPINativeTypeNum::Bytes;
 use mimir::enums::ODPIOracleTypeNum::Varchar;
 use mimir::{flags, Connection, Data};
@@ -46,14 +47,41 @@ pub struct ColumnInfo {
     #[set = "pub"]
     // #[get = "pub"]
     data_type_mod: Option<String>,
+    /// The column data type owner.
+    #[set = "pub"]
+    // #[get = "pub"]
+    data_type_owner: Option<String>,
     /// The column data length.
     #[set = "pub"]
     // #[get = "pub"]
     data_length: f64,
+    /// The column data precision.
+    #[set = "pub"]
+    // #[get = "pub"]
+    data_precision: Option<f64>,
+    /// The column data scale.
+    #[set = "pub"]
+    // #[get = "pub"]
+    data_scale: Option<f64>,
     /// Is the column nullable?
     #[set = "pub"]
     // #[get = "pub"]
     nullable: Option<bool>,
+    /// The column id.
+    #[set = "pub"]
+    column_id: Option<f64>,
+    /// The default length.
+    #[set = "pub"]
+    default_length: Option<f64>,
+    /// The number of distinct values.
+    #[set = "pub"]
+    num_distinct: Option<f64>,
+    /// The low value (as bytes).
+    #[set = "pub"]
+    low_value: Option<Vec<u8>>,
+    /// The high value (as bytes).
+    #[set = "pub"]
+    high_value: Option<Vec<u8>>,
     /// Last analysis time.
     #[set = "pub"]
     // #[get = "pub"]
@@ -69,16 +97,33 @@ fn string_or_null<T: fmt::Display>(opt_val: &Option<T>) -> String {
     }
 }
 
+/// Generate a hex `String` from an optional `Vec<u8>` or "(null)" if None.
+fn hex_or_null(opt_val: &Option<Vec<u8>>) -> String {
+    if let Some(ref val) = *opt_val {
+        format!("{:2X}", val.as_hex())
+    } else {
+        "(null)".to_string()
+    }
+}
+
 impl fmt::Display for ColumnInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             self.name,
             string_or_null(&self.data_type),
             string_or_null(&self.data_type_mod),
+            string_or_null(&self.data_type_owner),
             self.data_length,
+            string_or_null(&self.data_precision),
+            string_or_null(&self.data_scale),
             string_or_null(&self.nullable),
+            string_or_null(&self.column_id),
+            string_or_null(&self.default_length),
+            string_or_null(&self.num_distinct),
+            hex_or_null(&self.low_value),
+            // string_or_null(&self.high_value),
             string_or_null(&self.last_analyzed)
         )
     }
@@ -132,11 +177,25 @@ fn conn(ctxt: &Context) -> Result<()> {
             let (_, data_type_mod_ptr) = table_desc.get_query_value(4)?;
             let data_type_mod_data: Data = data_type_mod_ptr.into();
             let (_, data_type_owner_ptr) = table_desc.get_query_value(5)?;
-            let _data_type_owner_data: Data = data_type_owner_ptr.into();
+            let data_type_owner_data: Data = data_type_owner_ptr.into();
             let (_, data_length_ptr) = table_desc.get_query_value(6)?;
             let data_length_data: Data = data_length_ptr.into();
+            let (_, data_precision_ptr) = table_desc.get_query_value(7)?;
+            let data_precision_data: Data = data_precision_ptr.into();
+            let (_, data_scale_ptr) = table_desc.get_query_value(8)?;
+            let data_scale_data: Data = data_scale_ptr.into();
             let (_, nullable_ptr) = table_desc.get_query_value(9)?;
             let nullable_data: Data = nullable_ptr.into();
+            let (_, column_id_ptr) = table_desc.get_query_value(10)?;
+            let column_id_data: Data = column_id_ptr.into();
+            let (_, default_length_ptr) = table_desc.get_query_value(11)?;
+            let default_length_data: Data = default_length_ptr.into();
+            let (_, num_distinct_ptr) = table_desc.get_query_value(12)?;
+            let num_distinct_data: Data = num_distinct_ptr.into();
+            let (_, low_value_ptr) = table_desc.get_query_value(13)?;
+            let low_value_data: Data = low_value_ptr.into();
+            let (_, high_value_ptr) = table_desc.get_query_value(14)?;
+            let high_value_data: Data = high_value_ptr.into();
             let (_, last_analyzed_ptr) = table_desc.get_query_value(18)?;
             let last_analyzed_data: Data = last_analyzed_ptr.into();
 
@@ -158,9 +217,45 @@ fn conn(ctxt: &Context) -> Result<()> {
                 let data_type_mod = data_type_mod_data.get_string();
                 col_info.set_data_type_mod(Some(data_type_mod));
             });
+            not_null!(data_type_owner_data, {
+                let data_type_owner = data_type_owner_data.get_string();
+                col_info.set_data_type_owner(Some(data_type_owner));
+            });
             if !data_length_data.null() {
                 col_info.set_data_length(data_length_data.get_double());
             }
+            not_null!(data_precision_data, {
+                let data_precision = data_precision_data.get_double();
+                col_info.set_data_precision(Some(data_precision));
+            });
+            not_null!(data_scale_data, {
+                let data_scale = data_scale_data.get_double();
+                col_info.set_data_scale(Some(data_scale));
+            });
+            not_null!(data_scale_data, {
+                let data_scale = data_scale_data.get_double();
+                col_info.set_data_scale(Some(data_scale));
+            });
+            not_null!(column_id_data, {
+                let column_id = column_id_data.get_double();
+                col_info.set_column_id(Some(column_id));
+            });
+            not_null!(default_length_data, {
+                let default_length = default_length_data.get_double();
+                col_info.set_default_length(Some(default_length));
+            });
+            not_null!(num_distinct_data, {
+                let num_distinct = num_distinct_data.get_double();
+                col_info.set_num_distinct(Some(num_distinct));
+            });
+            not_null!(low_value_data, {
+                let low_value = low_value_data.get_bytes();
+                col_info.set_low_value(Some(low_value));
+            });
+            not_null!(high_value_data, {
+                let high_value = high_value_data.get_bytes();
+                col_info.set_high_value(Some(high_value));
+            });
             not_null!(last_analyzed_data, {
                 let last_analyzed = last_analyzed_data.get_utc();
                 col_info.set_last_analyzed(Some(last_analyzed));

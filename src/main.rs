@@ -19,6 +19,7 @@ mod macros;
 
 extern crate chrono;
 extern crate clap;
+extern crate hex_slice;
 extern crate mimir;
 extern crate term;
 
