@@ -7,14 +7,12 @@
 // modified, or distributed except according to those terms.
 
 //! `tyr` runtime
-use chrono::{DateTime, Utc};
 use clap::{App, Arg};
 use context::{Context, ContextBuilder};
 use error::{ErrorKind, Result};
-use hex_slice::AsHex;
 use mimir::enums::ODPINativeTypeNum::Bytes;
 use mimir::enums::ODPIOracleTypeNum::Varchar;
-use mimir::{flags, Connection, Data};
+use mimir::{flags, Connection, Data, TypeInfo};
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::fmt;
@@ -32,99 +30,43 @@ EVALUATION_EDITION, UNUSABLE_BEFORE, UNUSABLE_BEGINNING
 FROM user_tab_columns
 WHERE table_name=:table_name";
 
-#[derive(Clone, Debug, Default, Getters, PartialEq, Setters)]
-/// Column information relevant for `tyr`.
-pub struct ColumnInfo {
+/// Query Data by Column
+#[derive(Debug, Default, Getters, MutGetters, Setters)]
+pub struct QueryDataByCol {
     /// The column name.
-    #[set = "pub"]
-    // #[get = "pub"]
-    name: String,
-    /// The column data type.
-    #[set = "pub"]
-    // #[get = "pub"]
-    data_type: Option<String>,
-    /// The column data type modifier.
-    #[set = "pub"]
-    // #[get = "pub"]
-    data_type_mod: Option<String>,
-    /// The column data type owner.
-    #[set = "pub"]
-    // #[get = "pub"]
-    data_type_owner: Option<String>,
-    /// The column data length.
-    #[set = "pub"]
-    // #[get = "pub"]
-    data_length: f64,
-    /// The column data precision.
-    #[set = "pub"]
-    // #[get = "pub"]
-    data_precision: Option<f64>,
-    /// The column data scale.
-    #[set = "pub"]
-    // #[get = "pub"]
-    data_scale: Option<f64>,
-    /// Is the column nullable?
-    #[set = "pub"]
-    // #[get = "pub"]
-    nullable: Option<bool>,
-    /// The column id.
-    #[set = "pub"]
-    column_id: Option<f64>,
-    /// The default length.
-    #[set = "pub"]
-    default_length: Option<f64>,
-    /// The number of distinct values.
-    #[set = "pub"]
-    num_distinct: Option<f64>,
-    /// The low value (as bytes).
-    #[set = "pub"]
-    low_value: Option<Vec<u8>>,
-    /// The high value (as bytes).
-    #[set = "pub"]
-    high_value: Option<Vec<u8>>,
-    /// Last analysis time.
-    #[set = "pub"]
-    // #[get = "pub"]
-    last_analyzed: Option<DateTime<Utc>>,
+    #[get = "pub"]
+    #[set]
+    column_name: String,
+    /// The maximum length (as a `String`) in the column.
+    #[get = "pub"]
+    #[get_mut]
+    #[set]
+    max_length: usize,
+    /// The column native data type.
+    #[get = "pub"]
+    #[set]
+    type_info: TypeInfo,
+    /// The column data.
+    #[get = "pub"]
+    #[get_mut]
+    data: Vec<Data>,
 }
 
-/// Generate a `String` from an optional `Display` or "(null)" if None.
-fn string_or_null<T: fmt::Display>(opt_val: &Option<T>) -> String {
-    if let Some(ref val) = *opt_val {
-        val.to_string()
-    } else {
-        "(null)".to_string()
+impl QueryDataByCol {
+    /// Get the row count for this col data.
+    pub fn row_count(&self) -> usize {
+        self.data.len()
     }
 }
 
-/// Generate a hex `String` from an optional `Vec<u8>` or "(null)" if None.
-fn hex_or_null(opt_val: &Option<Vec<u8>>) -> String {
-    if let Some(ref val) = *opt_val {
-        format!("{:2X}", val.as_hex())
-    } else {
-        "(null)".to_string()
-    }
-}
-
-impl fmt::Display for ColumnInfo {
+impl fmt::Display for QueryDataByCol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
-            self.name,
-            string_or_null(&self.data_type),
-            string_or_null(&self.data_type_mod),
-            string_or_null(&self.data_type_owner),
-            self.data_length,
-            string_or_null(&self.data_precision),
-            string_or_null(&self.data_scale),
-            string_or_null(&self.nullable),
-            string_or_null(&self.column_id),
-            string_or_null(&self.default_length),
-            string_or_null(&self.num_distinct),
-            hex_or_null(&self.low_value),
-            // string_or_null(&self.high_value),
-            string_or_null(&self.last_analyzed)
+            "{} {} {}",
+            self.column_name,
+            self.max_length,
+            self.data.len()
         )
     }
 }
@@ -148,9 +90,9 @@ fn conn(ctxt: &Context) -> Result<()> {
 
     let user_tables = conn.prepare_stmt(Some(TABLE_NAMES), None, false)?;
 
-    let _cols = user_tables.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
+    let _ = user_tables.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
     let (mut found, _) = user_tables.fetch()?;
-    let mut table_names: HashMap<String, Vec<ColumnInfo>> = HashMap::new();
+    let mut table_names: HashMap<String, Vec<QueryDataByCol>> = HashMap::new();
 
     while found {
         let (_id_type, id_ptr) = user_tables.get_query_value(1)?;
@@ -160,107 +102,39 @@ fn conn(ctxt: &Context) -> Result<()> {
         found = f;
     }
 
-    for (table, col_info_vec) in &mut table_names {
+    for (table, qdbc_vec) in &mut table_names {
         let table_desc = conn.prepare_stmt(Some(DESC), None, false)?;
         let table_name_var = conn.new_var(Varchar, Bytes, 1, 256, false, false)?;
         table_name_var.set_from_bytes(0, table)?;
         table_desc.bind_by_name(":table_name", &table_name_var)?;
 
-        let _cols = table_desc.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
+        let cols = table_desc.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
         let (mut found, _buffer_row_index) = table_desc.fetch()?;
 
+        if found {
+            for i in 1..(cols + 1) {
+                let mut query_data_by_col: QueryDataByCol = Default::default();
+                let query_info = table_desc.get_query_info(i)?;
+                query_data_by_col.set_column_name(query_info.name());
+                query_data_by_col.set_max_length(query_info.name().len());
+                query_data_by_col.set_type_info(query_info.type_info());
+                qdbc_vec.push(query_data_by_col);
+            }
+        }
+
         while found {
-            let (_, name_ptr) = table_desc.get_query_value(2)?;
-            let name_data: Data = name_ptr.into();
-            let (_, data_type_ptr) = table_desc.get_query_value(3)?;
-            let data_type_data: Data = data_type_ptr.into();
-            let (_, data_type_mod_ptr) = table_desc.get_query_value(4)?;
-            let data_type_mod_data: Data = data_type_mod_ptr.into();
-            let (_, data_type_owner_ptr) = table_desc.get_query_value(5)?;
-            let data_type_owner_data: Data = data_type_owner_ptr.into();
-            let (_, data_length_ptr) = table_desc.get_query_value(6)?;
-            let data_length_data: Data = data_length_ptr.into();
-            let (_, data_precision_ptr) = table_desc.get_query_value(7)?;
-            let data_precision_data: Data = data_precision_ptr.into();
-            let (_, data_scale_ptr) = table_desc.get_query_value(8)?;
-            let data_scale_data: Data = data_scale_ptr.into();
-            let (_, nullable_ptr) = table_desc.get_query_value(9)?;
-            let nullable_data: Data = nullable_ptr.into();
-            let (_, column_id_ptr) = table_desc.get_query_value(10)?;
-            let column_id_data: Data = column_id_ptr.into();
-            let (_, default_length_ptr) = table_desc.get_query_value(11)?;
-            let default_length_data: Data = default_length_ptr.into();
-            let (_, num_distinct_ptr) = table_desc.get_query_value(12)?;
-            let num_distinct_data: Data = num_distinct_ptr.into();
-            let (_, low_value_ptr) = table_desc.get_query_value(13)?;
-            let low_value_data: Data = low_value_ptr.into();
-            let (_, high_value_ptr) = table_desc.get_query_value(14)?;
-            let high_value_data: Data = high_value_ptr.into();
-            let (_, last_analyzed_ptr) = table_desc.get_query_value(18)?;
-            let last_analyzed_data: Data = last_analyzed_ptr.into();
-
-            let mut col_info: ColumnInfo = Default::default();
-
-            if !name_data.null() {
-                let col_name = name_data.get_string();
-                col_info.set_name(col_name);
+            for i in 1..(cols + 1) {
+                let idx = (i - 1) as usize;
+                let (_, data) = table_desc.get_query_value(i)?;
+                let query_data_by_col = &mut qdbc_vec[idx];
+                let type_info = *query_data_by_col.type_info();
+                let cur_len = *query_data_by_col.max_length();
+                let data_len = data.len(&type_info)?;
+                if data_len > cur_len {
+                    *query_data_by_col.max_length_mut() = data_len;
+                }
+                (*query_data_by_col.data_mut()).push(data);
             }
-            not_null!(nullable_data, {
-                let nullable = nullable_data.get_string() == "Y";
-                col_info.set_nullable(Some(nullable));
-            });
-            not_null!(data_type_data, {
-                let data_type = data_type_data.get_string();
-                col_info.set_data_type(Some(data_type));
-            });
-            not_null!(data_type_mod_data, {
-                let data_type_mod = data_type_mod_data.get_string();
-                col_info.set_data_type_mod(Some(data_type_mod));
-            });
-            not_null!(data_type_owner_data, {
-                let data_type_owner = data_type_owner_data.get_string();
-                col_info.set_data_type_owner(Some(data_type_owner));
-            });
-            if !data_length_data.null() {
-                col_info.set_data_length(data_length_data.get_double());
-            }
-            not_null!(data_precision_data, {
-                let data_precision = data_precision_data.get_double();
-                col_info.set_data_precision(Some(data_precision));
-            });
-            not_null!(data_scale_data, {
-                let data_scale = data_scale_data.get_double();
-                col_info.set_data_scale(Some(data_scale));
-            });
-            not_null!(data_scale_data, {
-                let data_scale = data_scale_data.get_double();
-                col_info.set_data_scale(Some(data_scale));
-            });
-            not_null!(column_id_data, {
-                let column_id = column_id_data.get_double();
-                col_info.set_column_id(Some(column_id));
-            });
-            not_null!(default_length_data, {
-                let default_length = default_length_data.get_double();
-                col_info.set_default_length(Some(default_length));
-            });
-            not_null!(num_distinct_data, {
-                let num_distinct = num_distinct_data.get_double();
-                col_info.set_num_distinct(Some(num_distinct));
-            });
-            not_null!(low_value_data, {
-                let low_value = low_value_data.get_bytes();
-                col_info.set_low_value(Some(low_value));
-            });
-            not_null!(high_value_data, {
-                let high_value = high_value_data.get_bytes();
-                col_info.set_high_value(Some(high_value));
-            });
-            not_null!(last_analyzed_data, {
-                let last_analyzed = last_analyzed_data.get_utc();
-                col_info.set_last_analyzed(Some(last_analyzed));
-            });
-            col_info_vec.push(col_info);
 
             let (f, _) = table_desc.fetch()?;
             found = f;
