@@ -13,9 +13,8 @@ use error::{ErrorKind, Result};
 use mimir::enums::ODPINativeTypeNum::Bytes;
 use mimir::enums::ODPIOracleTypeNum::Varchar;
 use mimir::{flags, Connection, Data, TypeInfo};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::ffi::CString;
-use std::fmt;
 use util;
 
 /// User space table names query.
@@ -37,39 +36,18 @@ pub struct QueryDataByCol {
     #[get = "pub"]
     #[set]
     column_name: String,
-    /// The maximum length (as a `String`) in the column.
-    #[get = "pub"]
-    #[get_mut]
-    #[set]
-    max_length: usize,
     /// The column native data type.
     #[get = "pub"]
     #[set]
     type_info: TypeInfo,
     /// The column data.
     #[get = "pub"]
-    #[get_mut]
-    data: Vec<Data>,
+    #[set]
+    data: Option<Data>,
 }
 
-impl QueryDataByCol {
-    /// Get the row count for this col data.
-    pub fn row_count(&self) -> usize {
-        self.data.len()
-    }
-}
-
-impl fmt::Display for QueryDataByCol {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{} {} {}",
-            self.column_name,
-            self.max_length,
-            self.data.len()
-        )
-    }
-}
+/// Rows are a `BTreeMap` of row index to vector of column data.
+pub type Rows = BTreeMap<u32, Vec<QueryDataByCol>>;
 
 /// Connect to the database.
 fn conn(ctxt: &Context) -> Result<()> {
@@ -92,56 +70,46 @@ fn conn(ctxt: &Context) -> Result<()> {
 
     let _ = user_tables.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
     let (mut found, _) = user_tables.fetch()?;
-    let mut table_names: HashMap<String, Vec<QueryDataByCol>> = HashMap::new();
+    let mut table_names: BTreeMap<String, Rows> = BTreeMap::new();
 
     while found {
-        let (_id_type, id_ptr) = user_tables.get_query_value(1)?;
-        let data: Data = id_ptr.into();
+        let (_id_type, data) = user_tables.get_query_value(1)?;
         table_names.insert(data.get_string(), Default::default());
         let (f, _) = user_tables.fetch()?;
         found = f;
     }
 
-    for (table, qdbc_vec) in &mut table_names {
+    for (table, rows) in &mut table_names {
         let table_desc = conn.prepare_stmt(Some(DESC), None, false)?;
         let table_name_var = conn.new_var(Varchar, Bytes, 1, 256, false, false)?;
         table_name_var.set_from_bytes(0, table)?;
         table_desc.bind_by_name(":table_name", &table_name_var)?;
 
         let cols = table_desc.execute(flags::DPI_MODE_EXEC_DEFAULT)?;
-        let (mut found, _buffer_row_index) = table_desc.fetch()?;
+        let (mut found, mut buffer_row_index) = table_desc.fetch()?;
 
-        if found {
+        while found {
+            let mut row_data = Vec::new();
             for i in 1..(cols + 1) {
                 let mut query_data_by_col: QueryDataByCol = Default::default();
                 let query_info = table_desc.get_query_info(i)?;
-                query_data_by_col.set_column_name(query_info.name());
-                query_data_by_col.set_max_length(query_info.name().len());
-                query_data_by_col.set_type_info(query_info.type_info());
-                qdbc_vec.push(query_data_by_col);
-            }
-        }
-
-        while found {
-            for i in 1..(cols + 1) {
-                let idx = (i - 1) as usize;
                 let (_, data) = table_desc.get_query_value(i)?;
-                let query_data_by_col = &mut qdbc_vec[idx];
-                let type_info = *query_data_by_col.type_info();
-                let cur_len = *query_data_by_col.max_length();
-                let data_len = data.len(&type_info)?;
-                if data_len > cur_len {
-                    *query_data_by_col.max_length_mut() = data_len;
+                query_data_by_col.set_column_name(query_info.name());
+                query_data_by_col.set_type_info(query_info.type_info());
+                if !data.null() {
+                    query_data_by_col.set_data(Some(data));
                 }
-                (*query_data_by_col.data_mut()).push(data);
+                row_data.push(query_data_by_col);
             }
 
-            let (f, _) = table_desc.fetch()?;
+            rows.insert(buffer_row_index, row_data);
+            let (f, b) = table_desc.fetch()?;
             found = f;
+            buffer_row_index = b;
         }
 
-        table_name_var.release()?;
-        table_desc.close(None)?;
+        // table_name_var.release()?;
+        // table_desc.close(None)?;
     }
 
     user_tables.close(None)?;

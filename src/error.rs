@@ -18,6 +18,10 @@ error_chain!{
             description("The connection string is a required command line argument!")
             display("The connection string is a required command line argument!")
         }
+        Max {
+            description("")
+            display("")
+        }
         Stdout {
             description("Unable to open the stdout terminal for writing!")
             display("Unable to open the stdout terminal for writing!")

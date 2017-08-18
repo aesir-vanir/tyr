@@ -1,12 +1,11 @@
 //! `tyr` utilities
 use error::{ErrorKind, Result};
-use run::QueryDataByCol;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use term;
 
 /// Pad a string to the given length.
-fn pad_to_len(len: usize, s: &str) -> String {
-    let mut output = String::from(s);
+fn pad_left(len: usize, s: &str) -> String {
+    let mut output = String::new();
     let s_len = s.len();
     if s_len < len {
         let pad_len = len - s_len;
@@ -14,54 +13,61 @@ fn pad_to_len(len: usize, s: &str) -> String {
             output.push(' ');
         }
     }
+    output.push_str(s);
 
     output
 }
 
 /// Pretty print table column information.
-pub fn pretty_print_tables(tables: &HashMap<String, Vec<QueryDataByCol>>) -> Result<()> {
-    for (table, qibc_vec) in tables {
+pub fn pretty_print_tables(tables: &BTreeMap<String, ::run::Rows>) -> Result<()> {
+    for (table, rows) in tables {
         let mut t = term::stdout().ok_or_else(|| ErrorKind::Stdout)?;
         t.attr(term::Attr::Bold)?;
         t.fg(term::color::GREEN)?;
-        writeln!(t, "Table '{}'", table)?;
+        let table_name = format!(" Table '{}' ", table);
+        writeln!(t, "{:#^80}", table_name)?;
         t.reset()?;
         t.flush()?;
 
-        t.fg(term::color::YELLOW)?;
-        t.attr(term::Attr::Bold)?;
-        write!(t, "  ")?;
-        for (idx, qibc) in qibc_vec.iter().enumerate() {
-            write!(t, "{}", pad_to_len(*qibc.max_length(), qibc.column_name()))?;
-            if idx < qibc_vec.len() {
-                write!(t, "  ")?;
+        for (idx, col_data) in rows {
+            t.fg(term::color::YELLOW)?;
+            t.attr(term::Attr::Bold)?;
+            let mut row_name = String::from(" Row ");
+            row_name.push_str(&(idx + 1).to_string());
+            row_name.push(' ');
+            writeln!(t, "{:-^80}", row_name)?;
+            t.reset()?;
+            t.flush()?;
+
+            let max_col_length = col_data
+                .iter()
+                .map(|col| col.column_name().len())
+                .max()
+                .ok_or_else(|| ErrorKind::Max)?;
+
+            for col in col_data {
+                t.fg(term::color::GREEN)?;
+                t.attr(term::Attr::Bold)?;
+                let padded_col_name = pad_left(max_col_length, col.column_name());
+                write!(t, "{}: ", padded_col_name)?;
+                t.reset()?;
+                t.flush()?;
+                t.fg(term::color::GREEN)?;
+                let type_info = col.type_info();
+                let data = if let Some(ref data) = *col.data() {
+                    data.to_string(type_info)?
+                } else {
+                    "(null)".to_string()
+                };
+                writeln!(t, "{}", data)?;
+                t.reset()?;
+                t.flush()?;
+            }
+
+            if (*idx as usize) < rows.len() - 1 {
+                writeln!(t, "")?;
             }
         }
-        writeln!(t, "")?;
-        t.reset()?;
-        t.flush()?;
-
-        let row_count = qibc_vec[0].row_count();
-
-        t.fg(term::color::GREEN)?;
-        for i in 0..row_count {
-            write!(t, "  ")?;
-            for (idx, qibc) in qibc_vec.iter().enumerate() {
-                let data_vec = qibc.data();
-                let data_type = qibc.type_info();
-                write!(
-                    t,
-                    "{}",
-                    pad_to_len(*qibc.max_length(), &data_vec[i].to_string(data_type)?)
-                )?;
-                if idx < qibc_vec.len() {
-                    write!(t, "  ")?;
-                }
-            }
-            writeln!(t, "")?;
-        }
-        t.reset()?;
-        t.flush()?;
     }
 
     Ok(())
