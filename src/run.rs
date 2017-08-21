@@ -15,6 +15,7 @@ use mimir::enums::ODPIOracleTypeNum::Varchar;
 use mimir::{flags, Connection, Data, TypeInfo};
 use std::collections::BTreeMap;
 use std::ffi::CString;
+use tmpl;
 use util;
 
 /// User space table names query.
@@ -114,6 +115,7 @@ fn conn(ctxt: &Context) -> Result<()> {
 
     user_tables.close(None)?;
     util::pretty_print_tables(&table_names)?;
+    tmpl::render(&table_names)?;
 
     Ok(())
 }

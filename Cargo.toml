@@ -6,6 +6,7 @@ readme = "README.md"
 version = "0.1.0"
 
 [dependencies]
+Inflector = "0.10.1"
 chrono = "0.4.0"
 clap = "2.26.0"
 derive_builder = "0.5.0"
@@ -13,8 +14,11 @@ error-chain = "0.11.0-rc.2"
 getset = "0.0.5"
 lazy_static = "0.2.8"
 mimir = "0.2.0"
+mustache = "0.8.1"
+rustc-serialize = "0.3.24"
+serde = "1.0.11"
+serde_derive = "1.0.11"
 term = "0.4.6"
-
 [replace."derive_builder:0.5.0"]
 path = "../rust-derive-builder/derive_builder"
 
