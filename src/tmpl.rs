@@ -20,7 +20,8 @@ const FILE_TMPL: &'static str = "{{#tables}}/// {{struct_name}} ORM
 }{{/tables}}";
 
 /// `File` information used for mustache template.
-#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Hash, PartialEq, Serialize, Setters)]
+#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Hash, PartialEq,
+         Serialize, Setters)]
 struct File {
     /// Tables to include in this template.
     #[set]
