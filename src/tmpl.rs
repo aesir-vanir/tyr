@@ -8,17 +8,41 @@ use std::collections::BTreeMap;
 use std::io::{self, Cursor, Write};
 
 /// Table struct mustache template.
-const TABLE_STRUCT: &'static str = r"/// {{struct_name }}
-#[derive(Debug, Default)]
-pub struct {{struct_name}} {
+const FILE_TMPL: &'static str = "{{#tables}}/// {{struct_name}} ORM
+{{#derive}}#[derive(
+    {{#derives}}
+    {{name}}
+    {{/derives}}
+)]\n{{/derive}}pub struct {{struct_name}} {
     {{#field}}
-    {{field_name}}: {{field_type}},
+    {{field_name}}: {{{field_type}}},
     {{/field}}
-}";
+}{{/tables}}";
+
+/// `File` information used for mustache template.
+#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Hash, PartialEq, Serialize, Setters)]
+struct File {
+    /// Tables to include in this template.
+    #[set]
+    tables: Vec<Table>,
+}
+
+/// `Derive` information used for mustache template.
+#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Getters, Hash,
+         PartialEq, Serialize)]
+struct Derive {
+    /// The derive name.
+    name: String,
+}
 
 /// `Table` information used for mustache template.
-#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Getters, Hash, PartialEq, Serialize)]
-pub struct Table {
+#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Getters, Hash,
+         PartialEq, Serialize)]
+struct Table {
+    /// Are there any derives defined for the tables?
+    derive: bool,
+    /// The list of derives.
+    derives: Vec<Derive>,
     /// The struct name tag.
     // #[get]
     struct_name: String,
@@ -28,8 +52,9 @@ pub struct Table {
 }
 
 /// `Field` information used for mustache template.
-#[derive(Clone, Debug, Default, Deserialize, Eq, Getters, Hash, PartialEq, RustcEncodable, Serialize, Setters)]
-pub struct Field {
+#[derive(Clone, Debug, Default, Deserialize, Eq, Getters, Hash, PartialEq, RustcEncodable,
+         Serialize, Setters)]
+struct Field {
     /// The field name tag.
     #[set]
     field_name: String,
@@ -43,13 +68,15 @@ pub struct Field {
 }
 
 /// Render a table from the mustache template.
-pub fn render(tables: &BTreeMap<String, Rows>) -> Result<()> {
-    let template = mustache::compile_str(TABLE_STRUCT)?;
+pub fn render(table_info: &BTreeMap<String, Rows>) -> Result<()> {
+    let template = mustache::compile_str(FILE_TMPL)?;
+    let mut file: File = Default::default();
+    let mut tables: Vec<Table> = Vec::new();
 
-    for (table_name, rows) in tables {
+    for (table_name, rows) in table_info {
         let mut fields: Vec<Field> = Vec::new();
 
-        for (_row_idx, col_info) in rows {
+        for col_info in rows.values() {
             let mut field: Field = Default::default();
 
             for col in col_info {
@@ -90,11 +117,11 @@ pub fn render(tables: &BTreeMap<String, Rows>) -> Result<()> {
                         match &data[..] {
                             "Y" => {
                                 let mut optional = String::from("Option<");
-                                optional.push_str(&field.field_type());
+                                optional.push_str(field.field_type());
                                 optional.push_str(">");
                                 field.set_field_type(optional);
                                 field.set_nullable(true)
-                            },
+                            }
                             "N" => field.set_nullable(false),
                             _ => {}
                         }
@@ -108,12 +135,16 @@ pub fn render(tables: &BTreeMap<String, Rows>) -> Result<()> {
 
         let table: Table = TableBuilder::default()
             .struct_name(to_pascal_case(table_name))
+            .derive(false)
+            .derives(Vec::new())
             .field(fields)
             .build()?;
 
-        let mut out = Cursor::new(Vec::new());
-        template.render(&mut out, &table)?;
-        writeln!(io::stdout(), "{}", String::from_utf8(out.into_inner())?)?;
+        tables.push(table);
     }
+    file.set_tables(tables);
+    let mut out = Cursor::new(Vec::new());
+    template.render(&mut out, &file)?;
+    writeln!(io::stdout(), "{}", String::from_utf8(out.into_inner())?)?;
     Ok(())
 }
