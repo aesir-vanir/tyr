@@ -11,6 +11,7 @@ use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use error::{ErrorKind, Result};
 use std::fmt;
 use term;
+use tmpl::Templates;
 
 /// output level
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -136,7 +137,10 @@ pub fn run() -> Result<i32> {
     let readme = !tyr_matches.is_present("no-readme");
     let query = !tyr_matches.is_present("no-latest");
 
-    let (mit, apache) = match tyr_matches.value_of("license").ok_or_else(|| ErrorKind::License)? {
+    let (mit, apache) = match tyr_matches
+        .value_of("license")
+        .ok_or_else(|| ErrorKind::License)?
+    {
         "both" => (true, true),
         "mit" => (true, false),
         "apache" => (false, true),
@@ -144,7 +148,7 @@ pub fn run() -> Result<i32> {
         _ => return Err(ErrorKind::License.into()),
     };
 
-    let template = Templates::new(name, true, mit, apache, readme, query);
+    let template = Templates::new(name, mit, apache, readme, query);
 
     let msg = format!("Created ORM library `{}` project", name);
     info("Created", &msg, &level)?;
@@ -152,7 +156,10 @@ pub fn run() -> Result<i32> {
     Ok(0)
 }
 
-fn setup_cargo_new_args<'a>(matches: &'a ArgMatches, argv: &'a mut Vec<&'a str>) -> Result<(&'a str, &'a str, Level)> {
+fn setup_cargo_new_args<'a>(
+    matches: &'a ArgMatches,
+    argv: &'a mut Vec<&'a str>,
+) -> Result<(&'a str, &'a str, Level)> {
     argv.push("new");
     argv.push("--bin");
 

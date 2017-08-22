@@ -105,12 +105,17 @@
 #![cfg_attr(feature = "cargo-clippy", allow(use_self))]
 #[macro_use]
 extern crate error_chain;
+#[macro_use]
+extern crate serde_derive;
 
 extern crate clap;
+extern crate mustache;
+extern crate serde;
 extern crate term;
 
 mod error;
 mod run;
+mod tmpl;
 
 use std::io::{self, Write};
 use std::process;
