@@ -24,3 +24,11 @@ path = "../rust-derive-builder/derive_builder"
 
 [replace."mimir:0.2.0"]
 path = "../mimir"
+
+[[bin]]
+name = "tyr"
+path = "src/main.rs"
+
+[[bin]]
+name = "cargo-tyr"
+path = "src/cli/main.rs"
