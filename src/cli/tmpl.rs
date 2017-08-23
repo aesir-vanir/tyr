@@ -77,13 +77,7 @@ pub struct Templates {
 
 impl Templates {
     /// Create a new template use for file creation.
-    pub fn new(
-        name: &str,
-        mit: bool,
-        apache: bool,
-        readme: bool,
-        query: bool,
-    ) -> Templates {
+    pub fn new(name: &str, mit: bool, apache: bool, readme: bool, query: bool) -> Templates {
         let mut template = Templates {
             kvs: MapBuilder::new().insert_str("name", name).build(),
             main: "",
