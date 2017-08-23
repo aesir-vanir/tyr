@@ -10,6 +10,7 @@
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use error::{ErrorKind, Result};
 use std::fmt;
+use std::process::{Command, Stdio};
 use term;
 use tmpl::Templates;
 
@@ -131,8 +132,7 @@ pub fn run() -> Result<i32> {
     let tyr_matches = matches
         .subcommand_matches("tyr")
         .ok_or_else(|| ErrorKind::SubCommand)?;
-    let mut cargo_new_args = Vec::new();
-    let (_path, name, level) = setup_cargo_new_args(&tyr_matches, &mut cargo_new_args)?;
+    let (_path, name, level, cargo_new_args) = setup_cargo_new_args(&tyr_matches)?;
 
     let readme = !tyr_matches.is_present("no-readme");
     let query = !tyr_matches.is_present("no-latest");
@@ -148,7 +148,18 @@ pub fn run() -> Result<i32> {
         _ => return Err(ErrorKind::License.into()),
     };
 
-    let template = Templates::new(name, mit, apache, readme, query);
+    let _template = Templates::new(name, mit, apache, readme, query);
+
+    let mut cargo_new = Command::new("cargo")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .args(&cargo_new_args)
+        .spawn()?;
+    let ecode = cargo_new.wait()?;
+
+    if !ecode.success() {
+        return Ok(ecode.code().ok_or_else(|| ErrorKind::ExitCode)?);
+    }
 
     let msg = format!("Created ORM library `{}` project", name);
     info("Created", &msg, &level)?;
@@ -156,12 +167,12 @@ pub fn run() -> Result<i32> {
     Ok(0)
 }
 
+/// Setup the `cargo new` comand arguments.
 fn setup_cargo_new_args<'a>(
     matches: &'a ArgMatches,
-    argv: &'a mut Vec<&'a str>,
-) -> Result<(&'a str, &'a str, Level)> {
+) -> Result<(&'a str, &'a str, Level, Vec<&'a str>)> {
+    let mut argv = Vec::new();
     argv.push("new");
-    argv.push("--bin");
 
     if matches.is_present("frozen") {
         argv.push("--frozen");
@@ -213,7 +224,7 @@ fn setup_cargo_new_args<'a>(
         argv.push(path);
         path
     };
-    Ok((path, name, level))
+    Ok((path, name, level, argv))
 }
 
 /// Log a `cargo` formatted message to the terminal.

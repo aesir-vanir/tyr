@@ -10,11 +10,17 @@
 
 error_chain!{
     foreign_links {
+        FromUtf8(::std::string::FromUtf8Error);
         Io(::std::io::Error);
+        Mustache(::mustache::Error);
         Term(::term::Error);
     }
 
     errors {
+        ExitCode {
+           description("")
+            display("")
+        }
         License {
             description("")
             display("")

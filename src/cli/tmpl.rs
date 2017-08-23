@@ -7,13 +7,17 @@
 // modified, or distributed except according to those terms.
 
 //! `cargo-tyr` templates.
+use error::Result;
 use mustache::{self, Data, MapBuilder};
 use std::fmt;
+use std::io::Cursor;
 
 /// Template Type
 pub enum TemplateType {
     /// main.rs
     Main,
+    /// lib.rs
+    Lib,
     /// run.rs
     Run,
     /// error.rs
@@ -59,6 +63,8 @@ pub struct Templates {
     kvs: Data,
     /// The `main.rs` replacement.
     main: &'static str,
+    /// The `lib.rs` replacement.
+    lib: &'static str,
     /// The `run.rs` file.
     run: &'static str,
     /// The `error.rs` file.
@@ -77,16 +83,11 @@ pub struct Templates {
 
 impl Templates {
     /// Create a new template use for file creation.
-    pub fn new(
-        name: &str,
-        mit: bool,
-        apache: bool,
-        readme: bool,
-        query: bool,
-    ) -> Templates {
+    pub fn new(name: &str, mit: bool, apache: bool, readme: bool, query: bool) -> Templates {
         let mut template = Templates {
             kvs: MapBuilder::new().insert_str("name", name).build(),
             main: "",
+            lib: "",
             run: "",
             error: "",
             prefix: "",
@@ -122,6 +123,14 @@ impl Templates {
         template.error = CLAP_ERROR_RS;
 
         template
+    }
+
+    /// Render the given mustache template with the key/value pairs in `kvs`.
+    fn render(&self, template_str: &str) -> Result<String> {
+        let template = mustache::compile_str(template_str)?;
+        let mut out = Cursor::new(Vec::new());
+        template.render_data(&mut out, &self.kvs)?;
+        Ok(String::from_utf8(out.into_inner())?)
     }
 }
 
