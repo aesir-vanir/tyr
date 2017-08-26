@@ -34,8 +34,7 @@ impl {{struct_name}} {
 {{/tables}}";
 
 /// `File` information used for mustache template.
-#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Hash, PartialEq,
-         Serialize, Setters)]
+#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Hash, PartialEq, Serialize, Setters)]
 struct File {
     /// Tables to include in this template.
     #[set]
@@ -43,8 +42,7 @@ struct File {
 }
 
 /// `Derive` information used for mustache template.
-#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Getters, Hash,
-         PartialEq, Serialize)]
+#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Getters, Hash, PartialEq, Serialize)]
 struct Derive {
     /// The derive name.
     name: String,
@@ -53,8 +51,7 @@ struct Derive {
 }
 
 /// `Table` information used for mustache template.
-#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Getters, Hash,
-         PartialEq, Serialize)]
+#[derive(Builder, Clone, Debug, Default, Deserialize, RustcEncodable, Eq, Getters, Hash, PartialEq, Serialize)]
 struct Table {
     /// The list of derives.
     derives: Vec<Derive>,
@@ -67,8 +64,7 @@ struct Table {
 }
 
 /// `Field` information used for mustache template.
-#[derive(Clone, Debug, Default, Deserialize, Eq, Getters, Hash, PartialEq, RustcEncodable,
-         Serialize, Setters)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, Getters, Hash, PartialEq, RustcEncodable, Serialize, Setters)]
 struct Field {
     /// The field name tag.
     #[set]

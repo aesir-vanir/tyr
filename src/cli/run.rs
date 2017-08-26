@@ -168,9 +168,7 @@ pub fn run() -> Result<i32> {
 }
 
 /// Setup the `cargo new` comand arguments.
-fn setup_cargo_new_args<'a>(
-    matches: &'a ArgMatches,
-) -> Result<(&'a str, &'a str, Level, Vec<&'a str>)> {
+fn setup_cargo_new_args<'a>(matches: &'a ArgMatches) -> Result<(&'a str, &'a str, Level, Vec<&'a str>)> {
     let mut argv = Vec::new();
     argv.push("new");
 
