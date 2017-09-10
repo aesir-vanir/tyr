@@ -21,13 +21,11 @@ mod macros;
 #[macro_use]
 extern crate serde_derive;
 
-extern crate chrono;
 extern crate clap;
 extern crate inflector;
 extern crate mimir;
 extern crate mustache;
 extern crate rustc_serialize;
-extern crate serde;
 extern crate term;
 
 mod context;

@@ -110,7 +110,6 @@ extern crate serde_derive;
 
 extern crate clap;
 extern crate mustache;
-extern crate serde;
 extern crate term;
 
 mod error;
