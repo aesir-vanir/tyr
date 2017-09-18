@@ -2,7 +2,7 @@
 use mimir;
 
 /// `tyr` context
-#[derive(Builder, Debug, Getters)]
+#[derive(Builder, Getters)]
 pub struct Context {
     /// `mimir` context
     #[get = "pub"]
@@ -22,6 +22,9 @@ pub struct Context {
 impl ContextBuilder {
     /// Generate the default db context.
     fn default_db_context(&self) -> Result<mimir::Context, String> {
-        Ok(mimir::ContextBuilder::default().build()?)
+        match mimir::Context::create() {
+            Ok(ctxt) => Ok(ctxt),
+            Err(e) => Err(e.description().to_string()),
+        }
     }
 }
