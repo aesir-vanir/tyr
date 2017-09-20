@@ -70,9 +70,7 @@ pub fn run() -> Result<i32> {
                     Arg::with_name("name")
                         .long("name")
                         .value_name("NAME")
-                        .help(
-                            "Set the resulting package name, defaults to the value of <path>.",
-                        )
+                        .help("Set the resulting package name, defaults to the value of <path>.")
                         .takes_value(true),
                 )
                 .arg(
@@ -122,9 +120,11 @@ pub fn run() -> Result<i32> {
                         .long("no-readme")
                         .help("Turn off README.md generation."),
                 )
-                .arg(Arg::with_name("no-latest").long("no-latest").help(
-                    "Turn off the crates.io query for the latest version (use defaults).",
-                ))
+                .arg(
+                    Arg::with_name("no-latest")
+                        .long("no-latest")
+                        .help("Turn off the crates.io query for the latest version (use defaults)."),
+                )
                 .arg(Arg::with_name("path").takes_value(true).required(true)),
         )
         .get_matches();
