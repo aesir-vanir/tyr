@@ -89,7 +89,7 @@ fn conn(ctxt: &Context) -> Result<()> {
 
         while found {
             let mut row_data = Vec::new();
-            for i in 1..(cols + 1) {
+            for i in 1..=cols {
                 let mut query_data_by_col: QueryDataByCol = Default::default();
                 let query_info = table_desc.get_query_info(i)?;
                 let (_, data) = table_desc.get_query_value(i)?;

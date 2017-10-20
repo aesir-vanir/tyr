@@ -7,6 +7,7 @@
 // modified, or distributed except according to those terms.
 
 //! `tyr` 0.1.0
+#![feature(inclusive_range_syntax)]
 #![feature(custom_attribute)]
 #![cfg_attr(feature = "cargo-clippy", allow(use_self))]
 #![deny(missing_docs)]
