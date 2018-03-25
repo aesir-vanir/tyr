@@ -88,11 +88,7 @@ pub fn run() -> Result<i32> {
                         .conflicts_with("locked")
                         .help("Require Cargo.lock and cache are up to date"),
                 )
-                .arg(
-                    Arg::with_name("locked")
-                        .long("locked")
-                        .help("Require Cargo.lock is up to date"),
-                )
+                .arg(Arg::with_name("locked").long("locked").help("Require Cargo.lock is up to date"))
                 .arg(
                     Arg::with_name("verbose")
                         .short("v")
@@ -115,11 +111,7 @@ pub fn run() -> Result<i32> {
                         .default_value("both")
                         .takes_value(true),
                 )
-                .arg(
-                    Arg::with_name("no-readme")
-                        .long("no-readme")
-                        .help("Turn off README.md generation."),
-                )
+                .arg(Arg::with_name("no-readme").long("no-readme").help("Turn off README.md generation."))
                 .arg(
                     Arg::with_name("no-latest")
                         .long("no-latest")
@@ -129,18 +121,13 @@ pub fn run() -> Result<i32> {
         )
         .get_matches();
 
-    let tyr_matches = matches
-        .subcommand_matches("tyr")
-        .ok_or_else(|| ErrorKind::SubCommand)?;
+    let tyr_matches = matches.subcommand_matches("tyr").ok_or_else(|| ErrorKind::SubCommand)?;
     let (_path, name, level, cargo_new_args) = setup_cargo_new_args(&tyr_matches)?;
 
     let readme = !tyr_matches.is_present("no-readme");
     let query = !tyr_matches.is_present("no-latest");
 
-    let (mit, apache) = match tyr_matches
-        .value_of("license")
-        .ok_or_else(|| ErrorKind::License)?
-    {
+    let (mit, apache) = match tyr_matches.value_of("license").ok_or_else(|| ErrorKind::License)? {
         "both" => (true, true),
         "mit" => (true, false),
         "apache" => (false, true),
@@ -150,11 +137,7 @@ pub fn run() -> Result<i32> {
 
     let _template = Templates::new(name, mit, apache, readme, query);
 
-    let mut cargo_new = Command::new("cargo")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .args(&cargo_new_args)
-        .spawn()?;
+    let mut cargo_new = Command::new("cargo").stdout(Stdio::null()).stderr(Stdio::null()).args(&cargo_new_args).spawn()?;
     let ecode = cargo_new.wait()?;
 
     if !ecode.success() {

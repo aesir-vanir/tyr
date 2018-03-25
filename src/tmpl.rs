@@ -1,7 +1,7 @@
 //! `tyr` output templates
 use error::Result;
-use inflector::cases::snakecase::to_snake_case;
 use inflector::cases::pascalcase::to_pascal_case;
+use inflector::cases::snakecase::to_snake_case;
 use mustache;
 use run::Rows;
 use std::collections::BTreeMap;
@@ -143,10 +143,7 @@ pub fn render(table_info: &BTreeMap<String, Rows>) -> Result<()> {
         let mut derives = Vec::new();
         let derive_names = vec!["Clone", "Default", "Debug", "Eq", "Hash", "PartialEq"];
         for (idx, derive) in derive_names.iter().enumerate() {
-            let derive: Derive = DeriveBuilder::default()
-                .name(derive.to_string())
-                .comma(idx < (derive_names.len() - 1))
-                .build()?;
+            let derive: Derive = DeriveBuilder::default().name(derive.to_string()).comma(idx < (derive_names.len() - 1)).build()?;
             derives.push(derive);
         }
 

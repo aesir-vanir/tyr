@@ -39,11 +39,7 @@ pub fn pretty_print_tables(tables: &BTreeMap<String, ::run::Rows>) -> Result<()>
             t.reset()?;
             t.flush()?;
 
-            let max_col_length = col_data
-                .iter()
-                .map(|col| col.column_name().len())
-                .max()
-                .ok_or_else(|| ErrorKind::Max)?;
+            let max_col_length = col_data.iter().map(|col| col.column_name().len()).max().ok_or_else(|| ErrorKind::Max)?;
 
             for col in col_data {
                 t.fg(term::color::GREEN)?;

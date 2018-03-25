@@ -133,31 +133,13 @@ pub fn run() -> Result<i32> {
                 .required(true)
                 .value_name("CONN_STRING"),
         )
-        .arg(
-            Arg::with_name("username")
-                .short("u")
-                .long("username")
-                .takes_value(true)
-                .value_name("USERNAME"),
-        )
-        .arg(
-            Arg::with_name("password")
-                .short("p")
-                .long("password")
-                .takes_value(true)
-                .value_name("PASSWORD"),
-        )
+        .arg(Arg::with_name("username").short("u").long("username").takes_value(true).value_name("USERNAME"))
+        .arg(Arg::with_name("password").short("p").long("password").takes_value(true).value_name("PASSWORD"))
         .get_matches();
 
-    let conn_string = matches
-        .value_of("conn_string")
-        .ok_or(ErrorKind::ConnectionString)?;
-    let username = matches
-        .value_of("username")
-        .ok_or(ErrorKind::ConnectionString)?;
-    let password = matches
-        .value_of("password")
-        .ok_or(ErrorKind::ConnectionString)?;
+    let conn_string = matches.value_of("conn_string").ok_or(ErrorKind::ConnectionString)?;
+    let username = matches.value_of("username").ok_or(ErrorKind::ConnectionString)?;
+    let password = matches.value_of("password").ok_or(ErrorKind::ConnectionString)?;
     let ctxt = ContextBuilder::default()
         .conn_string(conn_string.to_string())
         .username(username.to_string())
