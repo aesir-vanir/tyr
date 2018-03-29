@@ -7,28 +7,25 @@
 // modified, or distributed except according to those terms.
 
 //! `cargo-tyr` templates.
-use error::Result;
-use mustache::{self, Data, MapBuilder};
 use std::fmt;
-use std::io::Cursor;
 
 /// Template Type
-pub enum TemplateType {
-    /// main.rs
-    Main,
-    /// lib.rs
-    Lib,
-    /// run.rs
-    Run,
-    /// error.rs
-    Error,
-    /// LICENSE-MIT
-    Mit,
-    /// LICENSE-APACHE
-    Apache,
-    /// README.md
-    Readme,
-}
+// pub enum TemplateType {
+//     /// main.rs
+//     Main,
+//     /// lib.rs
+//     Lib,
+//     /// run.rs
+//     Run,
+//     /// error.rs
+//     Error,
+//     /// LICENSE-MIT
+//     Mit,
+//     /// LICENSE-APACHE
+//     Apache,
+//     /// README.md
+//     Readme,
+// }
 
 /// json
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -59,12 +56,12 @@ impl fmt::Display for Crate {
 
 /// Contaier for file templates for various auto-generated files.
 pub struct Templates {
-    /// mustache `Data`.
-    kvs: Data,
+    // /// mustache `Data`.
+    // kvs: Data,
     /// The `main.rs` replacement.
     main: &'static str,
-    /// The `lib.rs` replacement.
-    lib: &'static str,
+    // /// The `lib.rs` replacement.
+    // lib: &'static str,
     /// The `run.rs` file.
     run: &'static str,
     /// The `error.rs` file.
@@ -77,24 +74,24 @@ pub struct Templates {
     apache: Option<&'static str>,
     /// The README.md file.
     readme: Option<&'static str>,
-    /// Should we query for the latest version of the dependencies?
-    query: bool,
+    // ///Should we query for the latest version of the dependencies?
+    // query: bool,
 }
 
 impl Templates {
     /// Create a new template use for file creation.
-    pub fn new(name: &str, mit: bool, apache: bool, readme: bool, query: bool) -> Templates {
+    pub fn new(_name: &str, mit: bool, apache: bool, readme: bool, _query: bool) -> Templates {
         let mut template = Templates {
-            kvs: MapBuilder::new().insert_str("name", name).build(),
+            // kvs: MapBuilder::new().insert_str("name", name).build(),
             main: "",
-            lib: "",
+            // lib: "",
             run: "",
             error: "",
             prefix: "",
             mit: None,
             apache: None,
             readme: None,
-            query: query,
+            // query,
         };
 
         if mit && apache {
@@ -125,20 +122,20 @@ impl Templates {
         template
     }
 
-    /// Render the given mustache template with the key/value pairs in `kvs`.
-    fn render(&self, template_str: &str) -> Result<String> {
-        let template = mustache::compile_str(template_str)?;
-        let mut out = Cursor::new(Vec::new());
-        template.render_data(&mut out, &self.kvs)?;
-        Ok(String::from_utf8(out.into_inner())?)
-    }
+    // /// Render the given mustache template with the key/value pairs in `kvs`.
+    // fn render(&self, template_str: &str) -> Result<String> {
+    //     let template = mustache::compile_str(template_str)?;
+    //     let mut out = Cursor::new(Vec::new());
+    //     template.render_data(&mut out, &self.kvs)?;
+    //     Ok(String::from_utf8(out.into_inner())?)
+    // }
 }
 
 /// crates.io Cargo Registry
-const REGISTRY_HOST: &str = "https://crates.io";
+// const REGISTRY_HOST: &str = "https://crates.io";
 
 /// Cargo.toml package readme entry.
-const CARGO_TOML_README: &str = r#"README.md"#;
+// const CARGO_TOML_README: &str = r#"README.md"#;
 
 /// clap version of `main.rs`
 const CLAP_MAIN_RS: &str = r#"//! `{{ name }}` 0.1.0
@@ -190,68 +187,68 @@ error_chain!{
 }"#;
 
 /// docopt version of `main.rs`
-const DOCOPT_MAIN_RS: &str = r#"//! `{{ name }}` 0.1.0
-#[macro_use]
-extern crate error_chain;
-#[macro_use]
-extern crate serde_derive;
-extern crate docopt;
+// const DOCOPT_MAIN_RS: &str = r#"//! `{{ name }}` 0.1.0
+// #[macro_use]
+// extern crate error_chain;
+// #[macro_use]
+// extern crate serde_derive;
+// extern crate docopt;
 
-mod error;
-mod run;
+// mod error;
+// mod run;
 
-use std::io::{self, Write};
-use std::process;
+// use std::io::{self, Write};
+// use std::process;
 
-/// CLI Entry Point
-fn main() {
-    match run::run() {
-        Ok(i) => process::exit(i),
-        Err(e) => {
-            writeln!(io::stderr(), "{}", e).expect("Unable to write to stderr!");
-            process::exit(1)
-        }
-    }
-}"#;
+// /// CLI Entry Point
+// fn main() {
+//     match run::run() {
+//         Ok(i) => process::exit(i),
+//         Err(e) => {
+//             writeln!(io::stderr(), "{}", e).expect("Unable to write to stderr!");
+//             process::exit(1)
+//         }
+//     }
+// }"#;
 
 /// docopt version of `run.rs`
-const DOCOPT_RUN_RS: &str = r#"//! `{{ name }}` runtime
-use docopt::Docopt;
-use error::Result;
-use std::io::{self, Write};
+// const DOCOPT_RUN_RS: &str = r#"//! `{{ name }}` runtime
+// use docopt::Docopt;
+// use error::Result;
+// use std::io::{self, Write};
 
-/// Write the Docopt usage string.
-const USAGE: &str = "
-Usage: {{ name }} ( -h | --help )
-       {{ name }} ( -V | --version )
+// /// Write the Docopt usage string.
+// const USAGE: &str = "
+// Usage: {{ name }} ( -h | --help )
+//        {{ name }} ( -V | --version )
 
-Options:
-    -h --help     Show this screen.
-    -v --version  Show version.
-";
+// Options:
+//     -h --help     Show this screen.
+//     -v --version  Show version.
+// ";
 
-/// Command line arguments
-#[derive(Debug, Deserialize)]
-struct Args;
+// /// Command line arguments
+// #[derive(Debug, Deserialize)]
+// struct Args;
 
-/// CLI Runtime
-pub fn run() -> Result<i32> {
-    let _args: Args = Docopt::new(USAGE).and_then(|d| d.deserialize())?;
-    writeln!(io::stdout(), "Hello, Rustaceans!")?;
-    Ok(0)
-}"#;
+// /// CLI Runtime
+// pub fn run() -> Result<i32> {
+//     let _args: Args = Docopt::new(USAGE).and_then(|d| d.deserialize())?;
+//     writeln!(io::stdout(), "Hello, Rustaceans!")?;
+//     Ok(0)
+// }"#;
 
 /// docopt version of `error.rs`
-const DOCOPT_ERROR_RS: &str = r#"//! `{{ name }}` errors
-error_chain!{
-    foreign_links {
-        Docopt(::docopt::Error);
-        Io(::std::io::Error);
-    }
-}"#;
+// const DOCOPT_ERROR_RS: &str = r#"//! `{{ name }}` errors
+// error_chain!{
+//     foreign_links {
+//         Docopt(::docopt::Error);
+//         Io(::std::io::Error);
+//     }
+// }"#;
 
 /// MIT/Apache-2.0 license entry for Cargo.toml.
-const CARGO_TOML_BOTH: &str = r#"MIT/Apache-2.0"#;
+// const CARGO_TOML_BOTH: &str = r#"MIT/Apache-2.0"#;
 
 /// .rs file prefix when both licenses are used.
 const PREFIX_BOTH: &str = r#"// Copyright (c) 2017 {{ name }} developers
@@ -265,7 +262,7 @@ const PREFIX_BOTH: &str = r#"// Copyright (c) 2017 {{ name }} developers
 "#;
 
 /// MIT license entry for Cargo.toml.
-const CARGO_TOML_MIT: &str = r#"MIT"#;
+// const CARGO_TOML_MIT: &str = r#"MIT"#;
 
 /// .rs file prefix when MIT is the only license.
 const PREFIX_MIT: &str = r#"// Copyright (c) 2017 {{ name }} developers
@@ -277,7 +274,7 @@ const PREFIX_MIT: &str = r#"// Copyright (c) 2017 {{ name }} developers
 "#;
 
 /// Apache-2.0 license entry for Cargo.toml.
-const CARGO_TOML_APACHE: &str = r#"Apache-2.0"#;
+// const CARGO_TOML_APACHE: &str = r#"Apache-2.0"#;
 
 /// .rs file prefix when Apache-2.0 is the only license.
 const PREFIX_APACHE: &str = r#"// Copyright (c) 2017 {{ name }} developers

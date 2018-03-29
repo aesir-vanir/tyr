@@ -122,7 +122,7 @@ pub fn run() -> Result<i32> {
         .get_matches();
 
     let tyr_matches = matches.subcommand_matches("tyr").ok_or_else(|| ErrorKind::SubCommand)?;
-    let (_path, name, level, cargo_new_args) = setup_cargo_new_args(&tyr_matches)?;
+    let (_path, name, level, cargo_new_args) = setup_cargo_new_args(tyr_matches)?;
 
     let readme = !tyr_matches.is_present("no-readme");
     let query = !tyr_matches.is_present("no-latest");
@@ -221,12 +221,12 @@ fn log_message(verb: &str, message: &str) -> Result<()> {
 }
 
 /// Log a debug level message to the terminal.
-fn debug(verb: &str, message: &str, level: &Level) -> Result<()> {
-    if *level <= Level::Debug {
-        log_message(verb, message)?;
-    }
-    Ok(())
-}
+// fn debug(verb: &str, message: &str, level: &Level) -> Result<()> {
+//     if *level <= Level::Debug {
+//         log_message(verb, message)?;
+//     }
+//     Ok(())
+// }
 
 /// Log an info level message to the terminal.
 fn info(verb: &str, message: &str, level: &Level) -> Result<()> {
