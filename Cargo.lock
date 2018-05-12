@@ -79,7 +79,7 @@ name = "chrono"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "num-integer 0.1.37 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num-integer 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -236,7 +236,7 @@ dependencies = [
 
 [[package]]
 name = "num-integer"
-version = "0.1.37"
+version = "0.1.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "num-traits 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -558,7 +558,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum memchr 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "796fba70e76612589ed2ce7f45282f5af869e0fdd7cc6199fa1aa1f1d591ba9d"
 "checksum mimir 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "fb2f784a8ac721ccf8eba07120922f29bc27cbce93fbf6dd5f50e073d3e29611"
 "checksum mustache 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ddb004e419334fc9172d0a5ff91c0770bdd6239091b0b343eb5926101f0a7d13"
-"checksum num-integer 0.1.37 (registry+https://github.com/rust-lang/crates.io-index)" = "2fef16815bb502c6a3be7fd842b7fd6e3371d5fbd33acc8ada7cc6c616cb4798"
+"checksum num-integer 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)" = "6ac0ea58d64a89d9d6b7688031b3be9358d6c919badcf7fbb0527ccfd891ee45"
 "checksum num-traits 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "775393e285254d2f5004596d69bb8bc1149754570dcc08cf30cabeba67955e28"
 "checksum proc-macro2 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "1b06e2f335f48d24442b35a19df506a835fb3547bc3c06ef27340da9acf5cae7"
 "checksum quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6e920b65c65f10b2ae65c831a81a073a89edd28c7cce89475bff467ab4167a"
