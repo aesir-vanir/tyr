@@ -132,8 +132,7 @@ pub fn run() -> Result<i32> {
                 .takes_value(true)
                 .required(true)
                 .value_name("CONN_STRING"),
-        )
-        .arg(Arg::with_name("username").short("u").long("username").takes_value(true).value_name("USERNAME"))
+        ).arg(Arg::with_name("username").short("u").long("username").takes_value(true).value_name("USERNAME"))
         .arg(Arg::with_name("password").short("p").long("password").takes_value(true).value_name("PASSWORD"))
         .get_matches();
 
