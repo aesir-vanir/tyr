@@ -128,9 +128,11 @@ pub fn render(table_info: &BTreeMap<String, Rows>) -> Result<()> {
                                 optional.push_str(field.field_type());
                                 optional.push_str(">");
                                 field.set_field_type(optional);
-                                field.set_nullable(true)
+                                field.set_nullable(true);
                             }
-                            "N" => field.set_nullable(false),
+                            "N" => {
+                                field.set_nullable(false);
+                            }
                             _ => {}
                         }
                     }

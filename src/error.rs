@@ -11,7 +11,7 @@ error_chain!{
     foreign_links {
         Io(::std::io::Error);
         FromUtf8(::std::string::FromUtf8Error);
-        Mimir(::mimir::error::Error);
+        Mimir(::mimir::Error);
         Mustache(::mustache::Error);
         Term(::term::Error);
     }
