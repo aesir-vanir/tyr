@@ -7,7 +7,7 @@
 // modified, or distributed except according to those terms.
 
 //! `tyr` errors
-error_chain!{
+error_chain! {
     foreign_links {
         Io(::std::io::Error);
         FromUtf8(::std::string::FromUtf8Error);

@@ -8,7 +8,7 @@
 
 //! `cargo-tyr` errors
 
-error_chain!{
+error_chain! {
     foreign_links {
         FromUtf8(::std::string::FromUtf8Error);
         Io(::std::io::Error);
